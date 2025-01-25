@@ -1,5 +1,5 @@
-# Set working directory (adjust path as needed)
+# To run the dashboard locally
+
 setwd("C:\\Users\\Rishita\\Desktop\\Iris-Dataset-Dashboard")
 
-# Alternative: Specify port
 rmarkdown::run("iris_dashboard.Rmd", shiny_args = list(launch.browser = TRUE))

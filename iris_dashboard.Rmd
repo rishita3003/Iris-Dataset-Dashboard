@@ -22,9 +22,36 @@ library(corrplot)
 library(qs)
 
 # Load data
-iris_processed <- qread("data/iris/iris_processed.qs")
-iris_summary <- qread("data/iris/iris_summary.qs")
-iris_analytics <- qread("data/iris/iris_analytics.qs")
+# iris_processed <- qread("data/iris/iris_processed.qs")
+# iris_summary <- qread("data/iris/iris_summary.qs")
+# iris_analytics <- qread("data/iris/iris_analytics.qs")
+
+iris_processed <- iris %>%
+  mutate(
+    id = row_number(),
+    Species = as.factor(Species),
+    Sepal.Area = Sepal.Length * Sepal.Width,
+    Petal.Area = Petal.Length * Petal.Width
+  )
+
+iris_analytics <- iris_processed %>%
+  group_by(Species) %>%
+  mutate(
+    Sepal.Length_zscore = scale(Sepal.Length),
+    Sepal.Width_zscore = scale(Sepal.Width),
+    Petal.Length_zscore = scale(Petal.Length),
+    Petal.Width_zscore = scale(Petal.Width),
+    Sepal.Length_outlier = abs(Sepal.Length_zscore) > 2,
+    Sepal.Width_outlier = abs(Sepal.Width_zscore) > 2,
+    Petal.Length_outlier = abs(Petal.Length_zscore) > 2,
+    Petal.Width_outlier = abs(Petal.Width_zscore) > 2
+  ) %>%
+  ungroup()
+
+iris_summary <- iris_processed %>%
+  group_by(Species) %>%
+  summarise(across(where(is.numeric), 
+                  list(mean = mean, sd = sd, min = min, max = max)))
 
 ```
 
@@ -96,7 +123,7 @@ renderPlotly({
 
 
 ### Distribution Plot
-```{r,fig.width = 8, fig.height=6}
+```{r}
 renderPlotly({
   filtered_data <- iris_processed %>%
     filter(Species %in% input$species_filter)
@@ -121,26 +148,41 @@ Row {data-height=450}
 
 ### Correlation Plot
 ```{r}
-renderPlot({
+renderPlotly({
  filtered_data <- iris_processed %>%
    filter(Species %in% input$species_filter)
-   
- # Select only numeric columns for correlation
+ 
  numeric_cols <- c("Sepal.Length", "Sepal.Width", "Petal.Length", 
                   "Petal.Width", "Sepal.Area", "Petal.Area")
  
- # Calculate correlation matrix for filtered data
  cor_matrix <- cor(filtered_data[, numeric_cols])
  
- corrplot(cor_matrix, 
-         method = "color",
-         type = "upper",
-         order = "hclust",
-         tl.col = "black",
-         tl.srt = 45,
-         addCoef.col = "black",
-         number.cex = 0.7)
+ plot_ly(
+   x = numeric_cols,
+   y = numeric_cols,
+   z = cor_matrix,
+   type = "heatmap",
+   colors = colorRamp(c("#90EE90", "#FFFFFF", "#B0C4DE")), # Matching box plot colors
+   text = matrix(sprintf("%.2f", cor_matrix), ncol = length(numeric_cols))
+ ) %>%
+   layout(
+     title = "Correlation Matrix",
+     xaxis = list(title = ""),
+     yaxis = list(title = ""),
+     paper_bgcolor = '#FAFAFA',
+     plot_bgcolor = '#FAFAFA',
+     height = 400,
+     margin = list(t = 50, b = 50)
+   ) %>%
+   config(scrollZoom = TRUE)
 })
+
+tags$style("
+  .js-plotly-plot {
+    overflow-y: auto;
+    max-height: 400px;
+  }
+")
 ```
 ### Box Plots
 ```{r}
