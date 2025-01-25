@@ -24,6 +24,8 @@ library(qs)
 # Load data
 iris_processed <- qread("data/iris/iris_processed.qs")
 iris_summary <- qread("data/iris/iris_summary.qs")
+iris_analytics <- qread("data/iris/iris_analytics.qs")
+
 ```
 
 Sidebar {.sidebar}
@@ -36,6 +38,15 @@ selectInput("y_var", "Y Variable:",
 checkboxGroupInput("species_filter", "Select Species:",
                   choices = unique(iris_processed$Species),
                   selected = unique(iris_processed$Species))
+# Add trend line toggle
+checkboxInput("show_trend", "Show Trend Line", TRUE)
+
+# Information about the Iris dataset
+HTML("
+<h4>About the Iris Dataset</h4>
+<p>The Iris dataset is a classic dataset in the field of machine learning and statistics. It contains <b>150 </b>observations of iris flowers, with each observation having four features: <i>Sepal Length, Sepal Width, Petal Length, and Petal Width</i>. These features are used to classify the flowers into three species: <i>Setosa, Versicolor, and Virginica</i>.</p>
+<p>The dataset was introduced by the British biologist and statistician <b><i>Ronald A. Fisher</i></b> in his 1936 paper, 'The use of multiple measurements in taxonomic problems'.</p>
+")
 ```
 
 Row {data-height=600}
@@ -44,23 +55,45 @@ Row {data-height=600}
 ### Interactive Scatter Plot
 ```{r}
 renderPlotly({
-  filtered_data <- iris_processed %>%
+  filtered_data <- iris_analytics %>%
     filter(Species %in% input$species_filter)
   
-  plot_ly(filtered_data, 
-          x = ~get(input$x_var), 
-          y = ~get(input$y_var),
-          color = ~Species,
-          type = "scatter",
-          mode = "markers") %>%
-    layout(title = paste(input$y_var, "vs", input$x_var),
-           xaxis = list(title = input$x_var),
-           yaxis = list(title = input$y_var))
+  # Calculate trend line if enabled
+  p <- plot_ly() %>%
+    add_trace(data = filtered_data,
+             x = ~get(input$x_var), 
+             y = ~get(input$y_var),
+             color = ~Species,
+             symbol = ~get(paste0(input$x_var, "_outlier")),
+             type = "scatter",
+             mode = "markers",
+             text = ~paste("Z-score:", round(get(paste0(input$x_var, "_zscore")), 2),
+                          "<br>Species:", Species)) 
+  
+  if(input$show_trend) {
+    fit <- lm(as.formula(paste(input$y_var, "~", input$x_var)), data = filtered_data)
+    
+    new_data <- data.frame(x = seq(min(filtered_data[[input$x_var]]), 
+                                  max(filtered_data[[input$x_var]]), 
+                                  length.out = 100))
+    names(new_data) <- input$x_var
+    new_data[[input$y_var]] <- predict(fit, newdata = new_data)
+    
+    p <- p %>%
+      add_lines(data = new_data,
+                x = as.formula(paste0("~", input$x_var)),
+                y = as.formula(paste0("~", input$y_var)),
+                line = list(dash = "dash"),
+                name = paste("Trend Line (R² =", 
+                           round(summary(fit)$r.squared, 3), ")"))
+  }
+  
+  p %>% layout(title = paste(input$y_var, "vs", input$x_var),
+               xaxis = list(title = input$x_var),
+               yaxis = list(title = input$y_var))
 })
 ```
 
-Row {data-height=450}
------------------------------------------------------------------------
 
 ### Distribution Plot
 ```{r,fig.width = 8, fig.height=6}
@@ -81,26 +114,23 @@ renderPlotly({
 })
 ```
 
+
+
+Row {data-height=450}
+-----------------------------------------------------------------------
+
 ### Correlation Plot
 ```{r}
 renderPlot({
  filtered_data <- iris_processed %>%
    filter(Species %in% input$species_filter)
    
- # Define custom column names
- custom_names <- c("Sep.L" = "Sepal.Length", 
-                  "Sep.W" = "Sepal.Width",
-                  "Pet.L" = "Petal.Length",
-                  "Pet.W" = "Petal.Width",
-                  "Sep.A" = "Sepal.Area",
-                  "Pet.A" = "Petal.Area")
+ # Select only numeric columns for correlation
+ numeric_cols <- c("Sepal.Length", "Sepal.Width", "Petal.Length", 
+                  "Petal.Width", "Sepal.Area", "Petal.Area")
  
- # Select and rename columns
- cor_data <- filtered_data %>%
-   select(all_of(custom_names)) %>%
-   rename(!!!setNames(names(custom_names), custom_names))
- 
- cor_matrix <- cor(cor_data)
+ # Calculate correlation matrix for filtered data
+ cor_matrix <- cor(filtered_data[, numeric_cols])
  
  corrplot(cor_matrix, 
          method = "color",
@@ -110,6 +140,22 @@ renderPlot({
          tl.srt = 45,
          addCoef.col = "black",
          number.cex = 0.7)
+})
+```
+### Box Plots
+```{r}
+renderPlotly({
+  filtered_data <- iris_processed %>%
+    filter(Species %in% input$species_filter)
+  
+  plot_ly(filtered_data, 
+          x = ~Species, 
+          y = ~get(input$x_var),
+          color = ~Species,
+          type = "box") %>%
+    layout(title = paste("Box Plot of", input$x_var),
+           xaxis = list(title = "Species"),
+           yaxis = list(title = input$x_var))
 })
 ```
 
@@ -137,19 +183,42 @@ renderDataTable({
 })
 ```
 
-### Box Plots
+### Analysis Summary
 ```{r}
-renderPlotly({
-  filtered_data <- iris_processed %>%
+renderUI({
+  filtered_data <- iris_analytics %>%
     filter(Species %in% input$species_filter)
   
-  plot_ly(filtered_data, 
-          x = ~Species, 
-          y = ~get(input$x_var),
-          color = ~Species,
-          type = "box") %>%
-    layout(title = paste("Box Plot of", input$x_var),
-           xaxis = list(title = "Species"),
-           yaxis = list(title = input$x_var))
+  # ANOVA
+  anova_result <- aov(as.formula(paste(input$y_var, "~ Species")), data = filtered_data)
+  anova_summary <- summary(anova_result)
+  
+  # Correlation
+  cor_test <- cor.test(filtered_data[[input$x_var]], filtered_data[[input$y_var]])
+  
+  # Outlier count
+  outlier_count <- sum(filtered_data[[paste0(input$x_var, "_outlier")]])
+  
+HTML(paste(
+    "<h4>Statistical Summary</h4>",
+    "<div style='display: flex; justify-content: space-between;'>",
+    "<div>",
+    "<b>ANOVA Results:</b><br>",
+    "F-statistic:", round(anova_summary[[1]]$`F value`[1], 3), "<br>",
+    "p-value:", format.pval(anova_summary[[1]]$`Pr(>F)`[1]), "<br><br>",
+    "</div>",
+    "<div>",
+    "<b>Correlation Analysis:</b><br>",
+    "Correlation coefficient:", round(cor_test$estimate, 3), "<br>",
+    "p-value:", format.pval(cor_test$p.value), "<br><br>",
+    "</div>",
+    "<div>",
+    "<b>Outlier Analysis:</b><br>",
+    "Number of outliers:", outlier_count, "<br>",
+    "Percentage:", round(100 * outlier_count/nrow(filtered_data), 1), "%",
+    "</div>",
+    "</div>"
+))
 })
 ```
+
