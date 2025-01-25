@@ -1,0 +1,155 @@
+---
+title: "Iris Dataset Analysis"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    theme: cosmo
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+options(shiny.port = 3838)
+Sys.setenv(RSTUDIO_PANDOC = "C:/Users/Rishita/AppData/Local/Pandoc")
+
+library(flexdashboard)
+library(shiny)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(DT)
+library(corrplot)
+library(qs)
+
+# Load data
+iris_processed <- qread("data/iris/iris_processed.qs")
+iris_summary <- qread("data/iris/iris_summary.qs")
+```
+
+Sidebar {.sidebar}
+-----------------------------------------------------------------------
+```{r}
+selectInput("x_var", "X Variable:",
+            choices = c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width", "Sepal.Area", "Petal.Area"))
+selectInput("y_var", "Y Variable:",
+            choices = c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width", "Sepal.Area", "Petal.Area"))
+checkboxGroupInput("species_filter", "Select Species:",
+                  choices = unique(iris_processed$Species),
+                  selected = unique(iris_processed$Species))
+```
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+### Interactive Scatter Plot
+```{r}
+renderPlotly({
+  filtered_data <- iris_processed %>%
+    filter(Species %in% input$species_filter)
+  
+  plot_ly(filtered_data, 
+          x = ~get(input$x_var), 
+          y = ~get(input$y_var),
+          color = ~Species,
+          type = "scatter",
+          mode = "markers") %>%
+    layout(title = paste(input$y_var, "vs", input$x_var),
+           xaxis = list(title = input$x_var),
+           yaxis = list(title = input$y_var))
+})
+```
+
+Row {data-height=450}
+-----------------------------------------------------------------------
+
+### Distribution Plot
+```{r,fig.width = 8, fig.height=6}
+renderPlotly({
+  filtered_data <- iris_processed %>%
+    filter(Species %in% input$species_filter)
+  
+  plot_ly(filtered_data, 
+          x = ~get(input$x_var),
+          color = ~Species,
+          type = "histogram",
+          opacity = 0.6,
+          histnorm = "probability density") %>%
+    layout(barmode = "overlay",
+           title = paste("Distribution of", input$x_var),
+           xaxis = list(title = input$x_var),
+           yaxis = list(title = "Density"))
+})
+```
+
+### Correlation Plot
+```{r}
+renderPlot({
+ filtered_data <- iris_processed %>%
+   filter(Species %in% input$species_filter)
+   
+ # Define custom column names
+ custom_names <- c("Sep.L" = "Sepal.Length", 
+                  "Sep.W" = "Sepal.Width",
+                  "Pet.L" = "Petal.Length",
+                  "Pet.W" = "Petal.Width",
+                  "Sep.A" = "Sepal.Area",
+                  "Pet.A" = "Petal.Area")
+ 
+ # Select and rename columns
+ cor_data <- filtered_data %>%
+   select(all_of(custom_names)) %>%
+   rename(!!!setNames(names(custom_names), custom_names))
+ 
+ cor_matrix <- cor(cor_data)
+ 
+ corrplot(cor_matrix, 
+         method = "color",
+         type = "upper",
+         order = "hclust",
+         tl.col = "black",
+         tl.srt = 45,
+         addCoef.col = "black",
+         number.cex = 0.7)
+})
+```
+
+Row {data-height=400}
+-----------------------------------------------------------------------
+
+### Summary Statistics
+```{r}
+renderDataTable({
+ datatable(iris_summary,
+          options = list(
+            pageLength = 10,
+            scrollX = TRUE,
+            scrollY = "400px",
+            dom = 't',
+            autoWidth = TRUE,
+            columnDefs = list(
+              list(width = '150px', targets = "_all")
+            )
+          ),
+          rownames = FALSE) %>%
+   formatStyle(columns = seq_len(ncol(iris_summary)),
+              backgroundColor = 'white',
+              borderBottom = '1px solid #ddd')
+})
+```
+
+### Box Plots
+```{r}
+renderPlotly({
+  filtered_data <- iris_processed %>%
+    filter(Species %in% input$species_filter)
+  
+  plot_ly(filtered_data, 
+          x = ~Species, 
+          y = ~get(input$x_var),
+          color = ~Species,
+          type = "box") %>%
+    layout(title = paste("Box Plot of", input$x_var),
+           xaxis = list(title = "Species"),
+           yaxis = list(title = input$x_var))
+})
+```
