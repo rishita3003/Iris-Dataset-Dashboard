@@ -35,13 +35,13 @@ iris_summary <- iris_processed %>%
 print(iris_summary)
 
 # Save as RDS files
-saveRDS(iris_processed, "data/iris/iris_processed.rds")
-saveRDS(iris_summary, "data/iris/iris_summary.rds")
-saveRDS(iris, "data/iris/iris_raw.rds")
+saveRDS(iris_processed, "Data/iris/iris_processed.rds")
+saveRDS(iris_summary, "Data/iris/iris_summary.rds")
+saveRDS(iris, "Data/iris/iris_raw.rds")
 
-qsave(iris_processed, "data/iris/iris_processed.qs")
-qsave(iris_summary, "data/iris/iris_summary.qs")
-qsave(iris, "data/iris/iris_raw.qs")
+qsave(iris_processed, "Data/iris/iris_processed.qs")
+qsave(iris_summary, "Data/iris/iris_summary.qs")
+qsave(iris, "Data/iris/iris_raw.qs")
 
 # Create metadata
 metadata <- data.frame(
@@ -52,4 +52,4 @@ metadata <- data.frame(
                      "Processed dataset with additional features",
                      "Summary statistics by species"), 2)
 )
-saveRDS(metadata, "data/metadata/meta.rds")
+saveRDS(metadata, "Data/metadata/meta.rds")

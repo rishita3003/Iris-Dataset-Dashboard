@@ -22,36 +22,9 @@ library(corrplot)
 library(qs)
 
 # Load data
-# iris_processed <- qread("data/iris/iris_processed.qs")
-# iris_summary <- qread("data/iris/iris_summary.qs")
-# iris_analytics <- qread("data/iris/iris_analytics.qs")
-
-iris_processed <- iris %>%
-  mutate(
-    id = row_number(),
-    Species = as.factor(Species),
-    Sepal.Area = Sepal.Length * Sepal.Width,
-    Petal.Area = Petal.Length * Petal.Width
-  )
-
-iris_analytics <- iris_processed %>%
-  group_by(Species) %>%
-  mutate(
-    Sepal.Length_zscore = scale(Sepal.Length),
-    Sepal.Width_zscore = scale(Sepal.Width),
-    Petal.Length_zscore = scale(Petal.Length),
-    Petal.Width_zscore = scale(Petal.Width),
-    Sepal.Length_outlier = abs(Sepal.Length_zscore) > 2,
-    Sepal.Width_outlier = abs(Sepal.Width_zscore) > 2,
-    Petal.Length_outlier = abs(Petal.Length_zscore) > 2,
-    Petal.Width_outlier = abs(Petal.Width_zscore) > 2
-  ) %>%
-  ungroup()
-
-iris_summary <- iris_processed %>%
-  group_by(Species) %>%
-  summarise(across(where(is.numeric), 
-                  list(mean = mean, sd = sd, min = min, max = max)))
+iris_processed <- qread("Data/iris/iris_processed.qs")
+iris_summary <- qread("Data/iris/iris_summary.qs")
+iris_analytics <- qread("Data/iris/iris_analytics.qs")
 
 ```
 
@@ -65,10 +38,8 @@ selectInput("y_var", "Y Variable:",
 checkboxGroupInput("species_filter", "Select Species:",
                   choices = unique(iris_processed$Species),
                   selected = unique(iris_processed$Species))
-# Add trend line toggle
 checkboxInput("show_trend", "Show Trend Line", TRUE)
 
-# Information about the Iris dataset
 HTML("
 <h4>About the Iris Dataset</h4>
 <p>The Iris dataset is a classic dataset in the field of machine learning and statistics. It contains <b>150 </b>observations of iris flowers, with each observation having four features: <i>Sepal Length, Sepal Width, Petal Length, and Petal Width</i>. These features are used to classify the flowers into three species: <i>Setosa, Versicolor, and Virginica</i>.</p>
@@ -85,7 +56,6 @@ renderPlotly({
   filtered_data <- iris_analytics %>%
     filter(Species %in% input$species_filter)
   
-  # Calculate trend line if enabled
   p <- plot_ly() %>%
     add_trace(data = filtered_data,
              x = ~get(input$x_var), 
@@ -231,14 +201,11 @@ renderUI({
   filtered_data <- iris_analytics %>%
     filter(Species %in% input$species_filter)
   
-  # ANOVA
   anova_result <- aov(as.formula(paste(input$y_var, "~ Species")), data = filtered_data)
   anova_summary <- summary(anova_result)
   
-  # Correlation
   cor_test <- cor.test(filtered_data[[input$x_var]], filtered_data[[input$y_var]])
   
-  # Outlier count
   outlier_count <- sum(filtered_data[[paste0(input$x_var, "_outlier")]])
   
 HTML(paste(

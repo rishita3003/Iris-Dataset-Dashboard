@@ -4,13 +4,12 @@ library(dotenv)
 
 load_dot_env()
 
-message("Deploying app for account: ", "8gf8vy-rishita-agarwal")
+message("Deploying app for account: ", "rish2604")
 
 rsconnect::setAccountInfo(
-    name = "8gf8vy-rishita-agarwal",#Sys.getenv("SHINY_ACCOUNT_NAME"),
+    name = "rish2604",#Sys.getenv("SHINY_ACCOUNT_NAME"),
     token = "218767E4A27090EE4E318A06272B4329",#Sys.getenv("SHINY_TOKEN"),
-    secret = #Sys.getenv("SHINY_SECRET")
+    secret = "/AiXQ+rMlTj//akRkiKFktY5xrLCK6qSQrDcV7w4"#Sys.getenv("SHINY_SECRET")
 )
 
-rsconnect::deployApp(appDir = "C:/Users/Rishita/Desktop/Iris-Dataset-Dashboard"#Sys.getenv("APP_DIR")
-)
+rsconnect::deployApp(appDir = "C:/Users/Rishita/Desktop/Iris-Dataset-Dashboard")

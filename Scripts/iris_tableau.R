@@ -1,11 +1,8 @@
-# Load required libraries
 library(dplyr)
 library(tidyr)
 library(readr)
 
-# Process iris dataset for Tableau
 iris_tableau <- iris_processed %>%
- # Add row ID if needed
  mutate(
    Month = rep(month.abb[1:3], length.out = n()),  # Add month dimension
    Year = rep(2020:2024, length.out = n()),        # Add year dimension
@@ -21,7 +18,7 @@ iris_tableau <- iris_processed %>%
  mutate(across(where(is.numeric), ~round(., 2)))
 
 # Export for Tableau
-write.csv(iris_tableau, "data/tableau/iris_tableau.csv", row.names = FALSE)
+write.csv(iris_tableau, "Data/tableau/iris_tableau.csv", row.names = FALSE)
 
 # Create metadata for measures and dimensions
 # metadata <- data.frame(
@@ -51,4 +48,4 @@ metadata <- data.frame(
   Role = roles
 )
 
-write.csv(metadata, "data/tableau/tableau_metadata.csv", row.names = FALSE)
+write.csv(metadata, "Data/tableau/tableau_metadata.csv", row.names = FALSE)
