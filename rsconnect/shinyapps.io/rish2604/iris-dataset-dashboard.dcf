@@ -1,10 +1,10 @@
 name: iris-dataset-dashboard
 title:
-username: 8gf8vy-rishita-agarwal
-account: 8gf8vy-rishita-agarwal
+username: rish2604
+account: rish2604
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 13806765
-bundleId: 9698566
+bundleId: 9700992
 url: https://rish2604.shinyapps.io/iris-dataset-dashboard/
 version: 1
