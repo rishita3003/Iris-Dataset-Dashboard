@@ -1,5 +1,7 @@
 # Iris-Dataset-Dashboard
 
+Deployed at https://rish2604.shinyapps.io/iris-dataset-dashboard/ 
+
 ## Instructions to run
 
 Add in the setup : 
