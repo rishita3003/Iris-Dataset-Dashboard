@@ -1,5 +1,3 @@
-
-
 library(dplyr)
 library(readr)
 library(tidyverse)
@@ -34,20 +32,14 @@ iris_summary <- iris_processed %>%
 
 print(iris_summary)
 
-# Save as RDS files
-saveRDS(iris_processed, "Data/iris/iris_processed.rds")
-saveRDS(iris_summary, "Data/iris/iris_summary.rds")
-saveRDS(iris, "Data/iris/iris_raw.rds")
-
 qsave(iris_processed, "Data/iris/iris_processed.qs")
 qsave(iris_summary, "Data/iris/iris_summary.qs")
 qsave(iris, "Data/iris/iris_raw.qs")
 
 # Create metadata
 metadata <- data.frame(
-  filename = c("iris_raw.rds", "iris_processed.rds", "iris_summary.rds",
-              "iris_raw.qs", "iris_processed.qs", "iris_summary.qs"),
-  format = c(rep("RDS", 3), rep("QS", 3)),
+  filename = c("iris_raw.qs", "iris_processed.qs", "iris_summary.qs"),
+  format = c(rep("QS", 3)),
   description = rep(c("Original iris dataset",
                      "Processed dataset with additional features",
                      "Summary statistics by species"), 2)

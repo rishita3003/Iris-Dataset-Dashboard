@@ -132,7 +132,7 @@ renderPlotly({
    y = numeric_cols,
    z = cor_matrix,
    type = "heatmap",
-   colors = colorRamp(c("#90EE90", "#FFFFFF", "#B0C4DE")), # Matching box plot colors
+   colors = colorRamp(c("#90EE90", "#FFFFFF", "#B0C4DE")), 
    text = matrix(sprintf("%.2f", cor_matrix), ncol = length(numeric_cols))
  ) %>%
    layout(

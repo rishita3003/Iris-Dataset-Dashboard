@@ -19,4 +19,6 @@ Simply run the `run.R` script to run the dashboard locally.
 1. Set the environment variables for your `shinyapps.io` account and the directory to be deployed.
 2. Then run the `deploy.R` file 
 
+## Project By - Rishita Agarwal, 220150016
+
 
