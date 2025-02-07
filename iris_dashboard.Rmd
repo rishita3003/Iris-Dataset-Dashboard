@@ -20,11 +20,66 @@ library(plotly)
 library(DT)
 library(corrplot)
 library(qs)
+library(tidyr)  # Add this to your library imports
+
 
 # Load data
 iris_processed <- qread("Data/iris/iris_processed.qs")
 iris_summary <- qread("Data/iris/iris_summary.qs")
 iris_analytics <- qread("Data/iris/iris_analytics.qs")
+
+custom_theme <- function() {
+  list(
+    # Main colors
+    colorway = c("#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEEAD"),
+    
+    # Plot styling
+    plot_bgcolor = "#FFFFFF",
+    paper_bgcolor = "#FFFFFF",
+    
+    # Font settings
+    font = list(
+      family = "Arial",
+      size = 12,
+      color = "#2C3E50"
+    ),
+    
+    # Title styling
+    title = list(
+      font = list(
+        family = "Arial",
+        size = 16,
+        color = "#2C3E50"
+      )
+    ),
+    
+    # Axis styling
+    xaxis = list(
+      gridcolor = "#ECF0F1",
+      linecolor = "#BDC3C7",
+      tickcolor = "#2C3E50",
+      tickfont = list(family = "Arial", size = 10),
+      title = list(font = list(size = 12))
+    ),
+    
+    yaxis = list(
+      gridcolor = "#ECF0F1",
+      linecolor = "#BDC3C7",
+      tickcolor = "#2C3E50",
+      tickfont = list(family = "Arial", size = 10),
+      title = list(font = list(size = 12))
+    ),
+    
+    # Legend styling
+    legend = list(
+      bgcolor = "#FFFFFF",
+      bordercolor = "#BDC3C7",
+      borderwidth = 1,
+      font = list(family = "Arial", size = 10)
+    ),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  )
+}
 
 ```
 
@@ -85,29 +140,53 @@ renderPlotly({
                            round(summary(fit)$r.squared, 3), ")"))
   }
   
-  p %>% layout(title = paste(input$y_var, "vs", input$x_var),
-               xaxis = list(title = input$x_var),
-               yaxis = list(title = input$y_var))
+  p %>% layout(custom_theme(),
+    title = list(
+      text = paste(input$y_var, "vs", input$x_var),
+      font = list(color = "#FFFFFF")
+    ),
+    xaxis = list(
+      title = list(
+        text = input$x_var,
+        font = list(color = "#FFFFFF")
+      )
+    ),
+    yaxis = list(
+      title = list(
+        text = input$y_var,
+        font = list(color = "#FFFFFF")
+      )
+    )
+  ) 
 })
 ```
 
 
 ### Distribution Plot
 ```{r}
+
 renderPlotly({
   filtered_data <- iris_processed %>%
     filter(Species %in% input$species_filter)
   
-  plot_ly(filtered_data, 
-          x = ~get(input$x_var),
-          color = ~Species,
-          type = "histogram",
-          opacity = 0.6,
-          histnorm = "probability density") %>%
-    layout(barmode = "overlay",
-           title = paste("Distribution of", input$x_var),
-           xaxis = list(title = input$x_var),
-           yaxis = list(title = "Density"))
+  # Create the distribution plot using ggplot2
+  p <- ggplot(filtered_data, aes(x = get(input$x_var), fill = Species)) +
+    geom_density(alpha = 0.6) +  # Using density instead of histogram for smooth distribution
+    labs(
+      title = paste("Distribution of", input$x_var),
+      x = input$x_var,
+      y = "Density"
+    ) +
+    theme_minimal() +
+    theme(custom_theme(), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+  # Convert to plotly
+  ggplotly(p) %>%
+    layout( 
+      font = list(family = "Courier New"),
+      margin = list(t = 50, b = 50, l = 50, r = 50),
+      barmode = "overlay"  # Ensures overlapping of distributions
+    )
 })
 ```
 
@@ -119,34 +198,58 @@ Row {data-height=450}
 ### Correlation Plot
 ```{r}
 renderPlotly({
- filtered_data <- iris_processed %>%
-   filter(Species %in% input$species_filter)
- 
- numeric_cols <- c("Sepal.Length", "Sepal.Width", "Petal.Length", 
-                  "Petal.Width", "Sepal.Area", "Petal.Area")
- 
- cor_matrix <- cor(filtered_data[, numeric_cols])
- 
- plot_ly(
-   x = numeric_cols,
-   y = numeric_cols,
-   z = cor_matrix,
-   type = "heatmap",
-   colors = colorRamp(c("#90EE90", "#FFFFFF", "#B0C4DE")), 
-   text = matrix(sprintf("%.2f", cor_matrix), ncol = length(numeric_cols))
- ) %>%
-   layout(
-     title = "Correlation Matrix",
-     xaxis = list(title = ""),
-     yaxis = list(title = ""),
-     paper_bgcolor = '#FAFAFA',
-     plot_bgcolor = '#FAFAFA',
-     height = 400,
-     margin = list(t = 50, b = 50)
-   ) %>%
-   config(scrollZoom = TRUE)
+  filtered_data <- iris_processed %>%
+    filter(Species %in% input$species_filter)
+  
+  numeric_cols <- c("Sepal.Length", "Sepal.Width", "Petal.Length", 
+                   "Petal.Width", "Sepal.Area", "Petal.Area")
+  
+  # Create correlation matrix
+  cor_matrix <- cor(filtered_data[, numeric_cols])
+  
+  # Convert matrix to long format for ggplot
+  cor_data <- cor_matrix %>%
+    as.data.frame() %>%
+    mutate(Var1 = numeric_cols) %>%
+    pivot_longer(-Var1, 
+                names_to = "Var2", 
+                values_to = "Correlation")
+  
+  # Create the heatmap using ggplot2
+  p <- ggplot(cor_data, aes(x = Var1, y = Var2, fill = Correlation)) +
+    geom_tile() +
+    geom_text(aes(label = sprintf("%.2f", Correlation)), 
+              family = "Courier New", 
+              color = "white") +
+              scale_fill_gradient2(
+                low = "#FF6B6B",
+                mid = "#FFFFFF",
+                high = "#4ECDC4",
+                midpoint = 0
+              ) +
+    scale_fill_gradient2(
+      low = "#FF6B6B", 
+      mid = "#FFFFFF",
+      high = "#4ECDC4",
+      midpoint = 0
+    ) +
+    labs(
+      title = "Correlation Matrix",
+      x = "",
+      y = ""
+    ) +
+    theme_minimal() +
+    theme(custom_theme(), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+  # Convert to plotly
+  ggplotly(p, height = 400) %>%
+    layout(
+      font = list(family = "Courier New") 
+    ) %>%
+    config(scrollZoom = TRUE)
 })
 
+# Add the CSS styling
 tags$style("
   .js-plotly-plot {
     overflow-y: auto;
@@ -160,14 +263,23 @@ renderPlotly({
   filtered_data <- iris_processed %>%
     filter(Species %in% input$species_filter)
   
-  plot_ly(filtered_data, 
-          x = ~Species, 
-          y = ~get(input$x_var),
-          color = ~Species,
-          type = "box") %>%
-    layout(title = paste("Box Plot of", input$x_var),
-           xaxis = list(title = "Species"),
-           yaxis = list(title = input$x_var))
+  # Create the box plot using ggplot2
+  p <- ggplot(filtered_data, aes(x = Species, y = get(input$x_var), fill = Species)) +
+    geom_boxplot() +
+    labs(
+      title = paste("Box Plot of", input$x_var),
+      x = "Species",
+      y = input$x_var
+    ) +
+    theme_minimal() +
+    theme(custom_theme())
+
+  # Convert to plotly
+  ggplotly(p) %>%
+    layout(
+      font = list(family = "Courier New"),
+      margin = list(t = 20, b = 20, l = 50, r = 50)
+    )
 })
 ```
 
